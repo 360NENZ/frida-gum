@@ -135,6 +135,11 @@ struct _GumPointerScan
   gsize mask;
   GArray * tiles;
   GumExceptor * exceptor;
+
+  GArray * worker_ranges;
+  GMutex mutex;
+  GCond cond;
+  guint n_workers_registering;
 };
 
 struct _GumPointerScanTile
@@ -203,10 +208,13 @@ static gsize gum_pointer_scan_count_words (GArray * tiles);
 static void gum_pointer_scan_run_parallel (GumPointerScan * self,
     GArray * matches);
 static void gum_pointer_scan_process_task (gpointer data, gpointer user_data);
+static void gum_pointer_scan_register_worker (GumPointerScan * self);
 static void gum_pointer_scan_run_inline (GumPointerScan * self,
     GArray * matches);
 static void gum_pointer_scan_process_tile (GumPointerScan * self,
     const GumPointerScanTile * tile, GArray * matches);
+static void gum_pointer_scan_process_words (GumPointerScan * self,
+    const gsize * words, gsize n_words, GArray * matches);
 #ifdef GUM_HAVE_POINTER_SCAN_SIMD
 static gsize gum_pointer_scan_process_vectors (GumPointerScan * self,
     const gsize * words, gsize n_words, GArray * matches);
@@ -232,6 +240,8 @@ static mspace gum_mspace_main = NULL;
 static mspace gum_mspace_internal = NULL;
 #endif
 static guint gum_cached_page_size;
+
+static const GumPointerScanTask gum_pointer_scan_registration_task = { 0, };
 
 #ifdef HAVE_ANDROID
 G_LOCK_DEFINE_STATIC (gum_softened_code_pages);
@@ -1634,7 +1644,8 @@ gum_match_token_append_with_mask (GumMatchToken * self,
  * Scans @ranges for pointer-aligned words matching any of @values, comparing
  * under @mask. Use %G_MAXSIZE for an exact match, or e.g.
  * 0x00007ffffffffff8 to strip arm64e PAC and non-pointer-isa bits. Memory that
- * is or becomes inaccessible while scanning is skipped.
+ * is or becomes inaccessible while scanning is skipped, as are the stacks of
+ * the threads the scan runs on.
  *
  * Returns: (element-type GumPointerMatch) (transfer full): the matches, sorted
  *          by address
@@ -1662,6 +1673,7 @@ gum_memory_find_pointers (const GumMemoryRange * ranges,
   scan.mask = mask;
   scan.tiles = gum_pointer_scan_tiles_from_ranges (ranges, n_ranges);
   scan.exceptor = gum_exceptor_obtain ();
+  scan.worker_ranges = NULL;
 
   if (gum_pointer_scan_count_words (scan.tiles) < GUM_POINTER_SCAN_INLINE_LIMIT)
     gum_pointer_scan_run_inline (&scan, matches);
@@ -1731,13 +1743,26 @@ static void
 gum_pointer_scan_run_parallel (GumPointerScan * self,
                                GArray * matches)
 {
-  guint max_threads, i;
+  guint max_threads, n_workers, i;
   GThreadPool * pool;
   GArray * tasks;
 
   max_threads = MIN (g_get_num_processors (), GUM_POINTER_SCAN_MAX_WORKERS);
-  pool = g_thread_pool_new (gum_pointer_scan_process_task, NULL, max_threads,
-      FALSE, NULL);
+  self->worker_ranges = g_array_sized_new (FALSE, FALSE,
+      sizeof (GumMemoryRange), GUM_MAX_THREAD_RANGES * max_threads);
+  g_mutex_init (&self->mutex);
+  g_cond_init (&self->cond);
+
+  pool = g_thread_pool_new (gum_pointer_scan_process_task, self, max_threads,
+      TRUE, NULL);
+  n_workers = g_thread_pool_get_num_threads (pool);
+
+  self->n_workers_registering = n_workers;
+  for (i = 0; i != n_workers; i++)
+  {
+    g_thread_pool_push (pool,
+        (gpointer) &gum_pointer_scan_registration_task, NULL);
+  }
 
   tasks = g_array_sized_new (FALSE, FALSE, sizeof (GumPointerScanTask),
       self->tiles->len);
@@ -1767,6 +1792,11 @@ gum_pointer_scan_run_parallel (GumPointerScan * self,
   }
 
   g_array_free (tasks, TRUE);
+
+  g_cond_clear (&self->cond);
+  g_mutex_clear (&self->mutex);
+  g_array_free (self->worker_ranges, TRUE);
+  self->worker_ranges = NULL;
 }
 
 static void
@@ -1775,7 +1805,33 @@ gum_pointer_scan_process_task (gpointer data,
 {
   GumPointerScanTask * task = data;
 
+  if (task == &gum_pointer_scan_registration_task)
+  {
+    gum_pointer_scan_register_worker (user_data);
+    return;
+  }
+
   gum_pointer_scan_process_tile (task->scan, task->tile, task->matches);
+}
+
+static void
+gum_pointer_scan_register_worker (GumPointerScan * self)
+{
+  GumMemoryRange ranges[GUM_MAX_THREAD_RANGES];
+  guint n;
+
+  n = gum_thread_try_get_ranges (ranges, G_N_ELEMENTS (ranges));
+
+  g_mutex_lock (&self->mutex);
+
+  g_array_append_vals (self->worker_ranges, ranges, n);
+
+  if (--self->n_workers_registering == 0)
+    g_cond_broadcast (&self->cond);
+  while (self->n_workers_registering != 0)
+    g_cond_wait (&self->cond, &self->mutex);
+
+  g_mutex_unlock (&self->mutex);
 }
 
 static void
@@ -1796,12 +1852,60 @@ gum_pointer_scan_process_tile (GumPointerScan * self,
                                const GumPointerScanTile * tile,
                                GArray * matches)
 {
+  GArray * skipped = self->worker_ranges;
+  gsize cursor, end;
+
+  if (skipped == NULL)
+  {
+    gum_pointer_scan_process_words (self, tile->words, tile->n_words, matches);
+    return;
+  }
+
+  cursor = GPOINTER_TO_SIZE (tile->words);
+  end = cursor + (tile->n_words * sizeof (gsize));
+
+  while (cursor < end)
+  {
+    gsize stop = end;
+    gboolean inside_skipped = FALSE;
+    guint i;
+
+    for (i = 0; i != skipped->len; i++)
+    {
+      const GumMemoryRange * r = &g_array_index (skipped, GumMemoryRange, i);
+      gsize r_start = r->base_address;
+      gsize r_end = r_start + r->size;
+
+      if (r_start <= cursor && cursor < r_end)
+      {
+        cursor = r_end;
+        inside_skipped = TRUE;
+        break;
+      }
+
+      if (r_start > cursor && r_start < stop)
+        stop = r_start;
+    }
+
+    if (inside_skipped)
+      continue;
+
+    gum_pointer_scan_process_words (self, GSIZE_TO_POINTER (cursor),
+        (stop - cursor) / sizeof (gsize), matches);
+    cursor = stop;
+  }
+}
+
+static void
+gum_pointer_scan_process_words (GumPointerScan * self,
+                                const gsize * words,
+                                gsize n_words,
+                                GArray * matches)
+{
   GumExceptorScope scope;
 
   if (gum_exceptor_try (self->exceptor, &scope))
   {
-    const gsize * words = tile->words;
-    gsize n_words = tile->n_words;
     gsize i = 0;
 
 #ifdef GUM_HAVE_POINTER_SCAN_SIMD
