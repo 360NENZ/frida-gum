@@ -6802,38 +6802,38 @@ TESTCASE (array_buffer_can_be_created)
 TESTCASE (method_can_be_called_sync)
 {
   COMPILE_AND_LOAD_SCRIPT ("rpc.exports.add = (a, b) => a + b;");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"add\",[1,2]]");
-  EXPECT_SEND_MESSAGE_WITH ("[\"frida:rpc\",42,\"ok\",3]");
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"add\",[1,2]]");
+  EXPECT_SEND_MESSAGE_WITH ("[\"meshlink:rpc\",42,\"ok\",3]");
 }
 
 TESTCASE (method_can_be_called_async)
 {
   COMPILE_AND_LOAD_SCRIPT ("rpc.exports.add = async (a, b) => a + b;");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"add\",[1,2]]");
-  EXPECT_SEND_MESSAGE_WITH ("[\"frida:rpc\",42,\"ok\",3]");
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"add\",[1,2]]");
+  EXPECT_SEND_MESSAGE_WITH ("[\"meshlink:rpc\",42,\"ok\",3]");
 }
 
 TESTCASE (method_can_throw_sync)
 {
   COMPILE_AND_LOAD_SCRIPT (
       "rpc.exports.raise = () => { throw new Error('no'); }");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"raise\",[]]");
-  EXPECT_SEND_MESSAGE_WITH_PREFIX ("[\"frida:rpc\",42,\"error\",\"no\",");
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"raise\",[]]");
+  EXPECT_SEND_MESSAGE_WITH_PREFIX ("[\"meshlink:rpc\",42,\"error\",\"no\",");
 }
 
 TESTCASE (method_can_throw_async)
 {
   COMPILE_AND_LOAD_SCRIPT (
       "rpc.exports.raise = async () => { throw new Error('no'); }");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"raise\",[]]");
-  EXPECT_SEND_MESSAGE_WITH_PREFIX ("[\"frida:rpc\",42,\"error\",\"no\",");
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"raise\",[]]");
+  EXPECT_SEND_MESSAGE_WITH_PREFIX ("[\"meshlink:rpc\",42,\"error\",\"no\",");
 }
 
 TESTCASE (method_can_return_null)
 {
   COMPILE_AND_LOAD_SCRIPT ("rpc.exports.returnNull = () => null;");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"returnNull\",[]]");
-  EXPECT_SEND_MESSAGE_WITH ("[\"frida:rpc\",42,\"ok\",null]");
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"returnNull\",[]]");
+  EXPECT_SEND_MESSAGE_WITH ("[\"meshlink:rpc\",42,\"ok\",null]");
 }
 
 TESTCASE (method_can_receive_binary_data)
@@ -6848,11 +6848,11 @@ TESTCASE (method_can_receive_binary_data)
 
   bytes = g_bytes_new_static (data_to_send, sizeof (data_to_send));
   gum_script_post (fixture->script,
-      "[\"frida:rpc\",42,\"call\",\"eat\",[\"yoghurt\"]]", bytes);
+      "[\"meshlink:rpc\",42,\"call\",\"eat\",[\"yoghurt\"]]", bytes);
   g_bytes_unref (bytes);
 
   EXPECT_SEND_MESSAGE_WITH_PAYLOAD_AND_DATA ("\"yoghurt\"", "13 37");
-  EXPECT_SEND_MESSAGE_WITH ("[\"frida:rpc\",42,\"ok\",null]");
+  EXPECT_SEND_MESSAGE_WITH ("[\"meshlink:rpc\",42,\"ok\",null]");
 }
 
 TESTCASE (method_can_return_binary_data)
@@ -6862,8 +6862,8 @@ TESTCASE (method_can_return_binary_data)
           "const buf = Memory.allocUtf8String(\"Yo\");\n"
           "return buf.readByteArray(2);\n"
       "};\n");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"read\",[]]");
-  EXPECT_SEND_MESSAGE_WITH_PAYLOAD_AND_DATA ("[\"frida:rpc\",42,\"ok\",null]",
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"read\",[]]");
+  EXPECT_SEND_MESSAGE_WITH_PAYLOAD_AND_DATA ("[\"meshlink:rpc\",42,\"ok\",null]",
       "59 6f");
 }
 
@@ -6874,24 +6874,24 @@ TESTCASE (method_can_return_value_and_binary_data)
           "const buf = Memory.allocUtf8String(\"Yo\");"
           "return [{meta: 'data'}, buf.readByteArray(2)];"
       "};");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"read\",[]]");
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"read\",[]]");
   EXPECT_SEND_MESSAGE_WITH_PAYLOAD_AND_DATA (
-      "[\"frida:rpc\",42,\"ok\",null,{\"meta\":\"data\"}]",
+      "[\"meshlink:rpc\",42,\"ok\",null,{\"meta\":\"data\"}]",
       "59 6f");
 }
 
 TESTCASE (method_list_can_be_queried)
 {
   COMPILE_AND_LOAD_SCRIPT ("rpc.exports = { a() {}, b() {}, c() {} };");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"list\"]");
-  EXPECT_SEND_MESSAGE_WITH ("[\"frida:rpc\",42,\"ok\",[\"a\",\"b\",\"c\"]]");
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"list\"]");
+  EXPECT_SEND_MESSAGE_WITH ("[\"meshlink:rpc\",42,\"ok\",[\"a\",\"b\",\"c\"]]");
 }
 
 TESTCASE (calling_inexistent_method_should_throw_error)
 {
   COMPILE_AND_LOAD_SCRIPT ("");
-  POST_MESSAGE ("[\"frida:rpc\",42,\"call\",\"banana\",[]]");
-  EXPECT_SEND_MESSAGE_WITH ("[\"frida:rpc\",42,\"error\","
+  POST_MESSAGE ("[\"meshlink:rpc\",42,\"call\",\"banana\",[]]");
+  EXPECT_SEND_MESSAGE_WITH ("[\"meshlink:rpc\",42,\"error\","
       "\"unable to find method 'banana'\"]");
 }
 
