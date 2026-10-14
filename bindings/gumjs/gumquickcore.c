@@ -1632,7 +1632,7 @@ _gum_quick_core_init (GumQuickCore * self,
   obj = JS_NewObject (ctx);
   JS_SetPropertyFunctionList (ctx, obj, gumjs_frida_entries,
       G_N_ELEMENTS (gumjs_frida_entries));
-  JS_DefinePropertyValueStr (ctx, ns, "Frida", obj, JS_PROP_C_W_E);
+  JS_DefinePropertyValueStr (ctx, ns, "Meshlink", obj, JS_PROP_C_W_E);
 
   obj = JS_NewObject (ctx);
   JS_SetPropertyFunctionList (ctx, obj, gumjs_script_entries,

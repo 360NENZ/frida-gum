@@ -5862,13 +5862,13 @@ TESTCASE (stalker_events_can_be_parsed)
 
 TESTCASE (frida_version_is_available)
 {
-  COMPILE_AND_LOAD_SCRIPT ("send(typeof Frida.version);");
+  COMPILE_AND_LOAD_SCRIPT ("send(typeof Meshlink.version);");
   EXPECT_SEND_MESSAGE_WITH ("\"string\"");
 }
 
 TESTCASE (frida_heap_size_can_be_queried)
 {
-  COMPILE_AND_LOAD_SCRIPT ("send(typeof Frida.heapSize);");
+  COMPILE_AND_LOAD_SCRIPT ("send(typeof Meshlink.heapSize);");
   EXPECT_SEND_MESSAGE_WITH ("\"number\"");
 }
 
