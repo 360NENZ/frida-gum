@@ -798,9 +798,9 @@ gum_cloak_is_locked (void)
 # include <unistd.h>
 # include <sys/syscall.h>
 
-/* Must match FRIDA_CONTROL_{MAGIC,TOKEN} in the Frida kernel module. */
-# define GUM_KERNEL_CLOAK_MAGIC 0x46524944
-# define GUM_KERNEL_CLOAK_TOKEN 0x1d5f9e6b2c7a4038ULL
+/* Must match the control constants in the optional kernel module. */
+# define GUM_KERNEL_CLOAK_MAGIC 0x5a3c91e7
+# define GUM_KERNEL_CLOAK_TOKEN 0x6b90a2137d4e58c1ULL
 
 static gboolean gum_kernel_cloak_available = FALSE;
 
