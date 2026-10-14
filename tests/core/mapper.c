@@ -83,7 +83,7 @@ main (gint argc,
           "\"teardown\":\"full\""
       "}";
   raw_config = g_base64_encode ((const guchar *) config, strlen (config));
-  gum_darwin_mapper_add_apple_parameter (mapper, "frida_gadget_config",
+  gum_darwin_mapper_add_apple_parameter (mapper, "meshlink_gadget_config",
       raw_config);
   g_free (raw_config);
 
