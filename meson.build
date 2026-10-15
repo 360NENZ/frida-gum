@@ -687,7 +687,7 @@ if have_gumjs
     default_options: [
       'default_library=static',
       'debug=false',
-      'embedder_string=-frida',
+      'embedder_string=-meshlink',
       'snapshot_compression=disabled',
       'pointer_compression=disabled',
       'shared_ro_heap=disabled',
