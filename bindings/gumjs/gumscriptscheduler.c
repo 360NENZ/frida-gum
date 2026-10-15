@@ -112,10 +112,14 @@ gum_script_scheduler_start (GumScriptScheduler * self)
   if (self->enable_background_thread && self->js_thread == NULL &&
       g_atomic_int_add (&self->start_request_seqno, 1) == 0)
   {
+    gchar * thread_name;
+
     self->js_loop = g_main_loop_new (self->js_context, TRUE);
 
-    self->js_thread = g_thread_new ("js-event-loop",
+    thread_name = g_uuid_string_random ();
+    self->js_thread = g_thread_new (thread_name,
         (GThreadFunc) gum_script_scheduler_run_js_loop, self);
+    g_free (thread_name);
   }
 }
 
