@@ -9923,6 +9923,7 @@ TESTCASE (cmodule_can_be_defined)
 TESTCASE (cmodule_can_be_defined_with_toolchain)
 {
   const gchar * code =
+      "#include <gum/gumprocess.h>\\n"
       "int\\n"
       "answer (void)\\n"
       "{\\n"

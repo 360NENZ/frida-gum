@@ -479,8 +479,8 @@ gum_tcc_cmodule_new (const gchar * source,
   tcc_set_options (state,
       "-Wall "
       "-Werror "
-      "-isystem /frida "
-      "-isystem /frida/capstone "
+      "-isystem /meshlink "
+      "-isystem /meshlink/capstone "
       "-nostdinc "
       "-nostdlib"
   );
@@ -674,8 +674,8 @@ gum_tcc_cmodule_load_header (void * opaque,
   guint i;
 
   name = path;
-  if (g_str_has_prefix (name, "/frida/"))
-    name += 7;
+  if (g_str_has_prefix (name, "/meshlink/"))
+    name += sizeof ("/meshlink/") - 1;
 
   for (i = 0; i != G_N_ELEMENTS (gum_cmodule_headers); i++)
   {
