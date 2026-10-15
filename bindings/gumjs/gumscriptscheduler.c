@@ -117,6 +117,7 @@ gum_script_scheduler_start (GumScriptScheduler * self)
     self->js_loop = g_main_loop_new (self->js_context, TRUE);
 
     thread_name = g_uuid_string_random ();
+    thread_name[15] = '\0';
     self->js_thread = g_thread_new (thread_name,
         (GThreadFunc) gum_script_scheduler_run_js_loop, self);
     g_free (thread_name);
