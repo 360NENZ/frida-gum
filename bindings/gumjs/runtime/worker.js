@@ -28,8 +28,9 @@ export class Worker {
 
     const {payload} = message;
 
-    if (Array.isArray(payload) && payload[0] === 'meshlink:rpc') {
-      const [, id, operation, ...params] = payload;
+    if (Array.isArray(payload) && this._pendingRequests.has(payload[0]) &&
+        (payload[1] === 'ok' || payload[1] === 'error')) {
+      const [id, operation, ...params] = payload;
       this._onRpcMessage(id, operation, params, data);
       return;
     }
@@ -50,7 +51,7 @@ export class Worker {
           reject(error);
       });
 
-      this.post(['meshlink:rpc', id, operation].concat(params));
+      this.post([id, operation].concat(params));
     });
   }
 

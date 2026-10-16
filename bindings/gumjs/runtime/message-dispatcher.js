@@ -21,8 +21,10 @@ export function MessageDispatcher() {
 
   function handleMessage(rawMessage, data) {
     const message = JSON.parse(rawMessage);
-    if (message instanceof Array && message[0] === 'meshlink:rpc') {
-      handleRpcMessage(message[1], message[2], message.slice(3), data);
+    if (message instanceof Array && message.length >= 2 &&
+        (typeof message[0] === 'number' || typeof message[0] === 'string') &&
+        (message[1] === 'call' || message[1] === 'list')) {
+      handleRpcMessage(message[0], message[1], message.slice(2), data);
     } else {
       messages.push([message, data]);
       dispatchMessages();
@@ -66,11 +68,11 @@ export function MessageDispatcher() {
   function reply(id, type, result, params = []) {
     if (Array.isArray(result) && result.length === 2 && result[1] instanceof ArrayBuffer) {
       const [value, data] = result;
-      send(['meshlink:rpc', id, type, undefined, value, ...params], data);
+      send([id, type, undefined, value, ...params], data);
     } else if (result instanceof ArrayBuffer) {
-      send(['meshlink:rpc', id, type, undefined, ...params], result);
+      send([id, type, undefined, ...params], result);
     } else {
-      send(['meshlink:rpc', id, type, result, ...params]);
+      send([id, type, result, ...params]);
     }
   }
 
