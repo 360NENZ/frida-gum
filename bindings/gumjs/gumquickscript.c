@@ -1580,6 +1580,8 @@ gum_quick_worker_on_runtime_loaded (JSValue error,
   if (self->state == GUM_WORKER_LOADED)
   {
     gchar * init_code;
+    gchar * worker_id;
+    gchar * eval_filename;
 
     init_code = g_strdup_printf (
         "(async () => {\n"
@@ -1592,9 +1594,14 @@ gum_quick_worker_on_runtime_loaded (JSValue error,
         "})();\n",
         self->asset->name);
 
+    worker_id = g_uuid_string_random ();
+    eval_filename = g_strdup_printf ("/%s.js", worker_id);
+    g_free (worker_id);
+
     val = JS_Eval (ctx, init_code, strlen (init_code),
-        "/_meshlink_worker_runtime.js",
+        eval_filename,
         JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
+    g_free (eval_filename);
     if (!JS_IsException (val))
       self->state = GUM_WORKER_RUNNING;
     else
