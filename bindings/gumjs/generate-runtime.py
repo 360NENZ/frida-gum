@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import secrets
 from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
@@ -49,6 +50,7 @@ def generate_runtime(
     endian: str,
 ):
     js_sources = []
+    runtime_prefix = "/" + secrets.token_hex(12)
     for source in sources:
         if source.suffix != ".js":
             continue
@@ -72,6 +74,7 @@ def generate_runtime(
             [s for s in js_sources if s.component is None or s.component == "quickjs"],
             quickcompile,
             qcflags,
+            runtime_prefix,
         )
 
     if "v8" in backends:
@@ -79,6 +82,7 @@ def generate_runtime(
             output_dir,
             priv_dir,
             [s for s in js_sources if s.component is None or s.component == "v8"],
+            runtime_prefix,
         )
 
     (output_dir / "runtime.bundle").write_bytes(b"")
@@ -91,6 +95,7 @@ def generate_runtime_quick(
     sources: List[JSSource],
     quickcompile: Path,
     flags: List[str],
+    runtime_prefix: str,
 ):
     with OutputFile(output_dir / "gumquickscript-runtime.h") as output_file:
         output_file.write(
@@ -105,10 +110,12 @@ struct _GumQuickRuntimeModule
 };
 """
         )
+        output_file.write(f'\n#define GUMJS_RUNTIME_PREFIX "{runtime_prefix}"\n')
 
         subprocess.run(
             [quickcompile]
             + flags
+            + ["--runtime-prefix", runtime_prefix]
             + [priv_dir, input_dir]
             + [s.path.relative_to(input_dir) for s in sources],
             check=True,
@@ -145,7 +152,9 @@ struct _GumQuickRuntimeModule
         output_file.write("\n  { NULL, NULL, 0 }\n};")
 
 
-def generate_runtime_v8(output_dir: Path, priv_dir: Path, sources: List[JSSource]):
+def generate_runtime_v8(
+    output_dir: Path, priv_dir: Path, sources: List[JSSource], runtime_prefix: str
+):
     with OutputFile(output_dir / "gumv8script-runtime.h") as output_file:
         output_file.write(
             """\
@@ -156,6 +165,7 @@ struct GumV8RuntimeModule
 };
 """
         )
+        output_file.write(f'\n#define GUMJS_RUNTIME_PREFIX "{runtime_prefix}"\n')
 
         modules = []
         for source in sources:

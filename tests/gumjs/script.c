@@ -11849,7 +11849,12 @@ TESTCASE (source_maps_should_be_supported_for_our_runtime)
   COMPILE_AND_LOAD_SCRIPT ("hexdump(null);");
 
   item = test_script_fixture_pop_message (fixture);
-  g_assert_nonnull (strstr (item->message, " (/meshlink/runtime/hexdump.js:"));
+  {
+    GRegex * runtime_path = g_regex_new (
+        " \\(/[0-9a-f]{24}/hexdump\\.js:", 0, 0, NULL);
+    g_assert_true (g_regex_match (runtime_path, item->message, 0, NULL));
+    g_regex_unref (runtime_path);
+  }
   test_script_message_item_free (item);
 
   EXPECT_NO_MESSAGES ();

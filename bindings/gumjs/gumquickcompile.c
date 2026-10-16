@@ -23,6 +23,7 @@ static JSModuleDef * gum_load_module (JSContext * ctx, const char * module_name,
 static int extra_write_flags = 0;
 static const char * output_dir;
 static const char * input_dir;
+static const char * runtime_prefix;
 static GHashTable * es_assets;
 
 int
@@ -49,6 +50,13 @@ main (int argc,
     argc--;
     argv[1] = argv[0];
     argv++;
+  }
+
+  if (argc >= 3 && strcmp (argv[1], "--runtime-prefix") == 0)
+  {
+    runtime_prefix = argv[2];
+    argc -= 2;
+    argv += 2;
   }
 
   if (argc < 4)
@@ -89,7 +97,8 @@ main (int argc,
 
 bad_usage:
   {
-    g_printerr ("Usage: %s [--bswap] <output_dir> <input_dir> <entrypoint.js> "
+    g_printerr ("Usage: %s [--bswap] [--runtime-prefix PATH] "
+        "<output_dir> <input_dir> <entrypoint.js> "
         "[<script1.js> <script2.js> ...]\n", argv[0]);
     goto beach;
   }
@@ -172,7 +181,7 @@ gum_es_name_from_filesystem_path (const char * path)
 
   parts = g_strsplit (path, dir_sep, 0);
   g_free (parts[0]);
-  parts[0] = g_strdup ("meshlink/runtime");
+  parts[0] = g_strdup (runtime_prefix != NULL ? runtime_prefix + 1 : "runtime");
 
   rel_name = g_strjoinv ("/", parts);
   name = g_strconcat ("/", rel_name, NULL);

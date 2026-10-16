@@ -90,7 +90,7 @@ gum_quick_api_run_prelude (GumQuickApi * self,
   if (source == NULL)
     return;
 
-  name = g_strconcat ("/_meshlink_", _gum_script_api_get_name (api), ".js", NULL);
+  name = g_uuid_string_random ();
 
   result = JS_Eval (ctx, source, strlen (source), name,
       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
