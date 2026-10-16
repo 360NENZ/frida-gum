@@ -6,6 +6,10 @@
 
 #include "gumv8socket.h"
 
+#ifdef MESHLINK_SOURCE_NAME
+# line __LINE__ MESHLINK_SOURCE_NAME
+#endif
+
 #include "gumv8macros.h"
 #include "gumv8scope.h"
 #include "gumv8script-priv.h"

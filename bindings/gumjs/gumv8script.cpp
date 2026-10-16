@@ -9,6 +9,10 @@
 
 #include "gumv8script.h"
 
+#ifdef MESHLINK_SOURCE_NAME
+# line __LINE__ MESHLINK_SOURCE_NAME
+#endif
+
 #include "gumscripttask.h"
 #include "gumsourcemap.h"
 #include "gumv8script-priv.h"

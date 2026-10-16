@@ -7,6 +7,10 @@
 
 #include "gumv8value.h"
 
+#ifdef MESHLINK_SOURCE_NAME
+# line __LINE__ MESHLINK_SOURCE_NAME
+#endif
+
 #include <string.h>
 #include <string>
 

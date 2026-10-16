@@ -7,6 +7,10 @@
 
 #include "gumv8kernel.h"
 
+#ifdef MESHLINK_SOURCE_NAME
+# line __LINE__ MESHLINK_SOURCE_NAME
+#endif
+
 #include "gumv8enumeratecontext.h"
 #include "gumv8macros.h"
 

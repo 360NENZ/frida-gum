@@ -6,6 +6,10 @@
 
 #include "gumv8stalker.h"
 
+#ifdef MESHLINK_SOURCE_NAME
+# line __LINE__ MESHLINK_SOURCE_NAME
+#endif
+
 #include "gumv8eventsink.h"
 #include "gumv8macros.h"
 #include "gumv8scope.h"

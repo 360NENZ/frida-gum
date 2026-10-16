@@ -13,6 +13,10 @@
 
 #include "gumv8core.h"
 
+#ifdef MESHLINK_SOURCE_NAME
+# line __LINE__ MESHLINK_SOURCE_NAME
+#endif
+
 #include "gumansi.h"
 #include "gumffi.h"
 #include "gumsourcemap.h"
