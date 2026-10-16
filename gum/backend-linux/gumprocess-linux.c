@@ -733,10 +733,14 @@ gum_linux_modify_thread (GumThreadId thread_id,
 
   if (thread_id == gum_process_get_current_thread_id ())
   {
-    result = GPOINTER_TO_UINT (g_thread_join (g_thread_new (
-            "gum-modify-thread-worker",
-            gum_linux_handle_modify_thread_comms,
-            &ctx)));
+    gchar * worker_name = g_uuid_string_random ();
+    GThread * worker;
+
+    worker_name[15] = '\0';
+    worker = g_thread_new (worker_name, gum_linux_handle_modify_thread_comms,
+        &ctx);
+    g_free (worker_name);
+    result = GPOINTER_TO_UINT (g_thread_join (worker));
   }
   else
   {
